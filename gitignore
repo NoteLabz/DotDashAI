@@ -1,0 +1,8 @@
+.dev.vars
+.dev.vars.*
+.env
+.env.local
+
+# Wrangler / Cloudflare local files
+.wrangler/
+node_modules/

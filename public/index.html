@@ -1,0 +1,430 @@
+<!-- DotDash AI — plain HTML/CSS/JS, no framework. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DotDash AI — Learn Morse Code the Smart Way</title>
+
+  <!-- Loading fonts from Google Fonts (free font library on the internet) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+
+  <!-- This is the important line: connects our own CSS design file -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Canvases script.js draws the particle background + confetti onto -->
+  <canvas id="particleBG"></canvas>
+  <canvas id="confettiCanvas"></canvas>
+  <div class="scanline" aria-hidden="true"></div>
+
+  <!-- Nav: every button's data-nav="..." maps to a page's data-page="..." -->
+  <nav class="nav" id="nav">
+    <div class="nav__brand" data-nav="home">
+      <div class="nav__logo">·-</div>
+      <span class="nav__name">Dot<span class="accent">Dash</span> AI</span>
+    </div>
+
+    <div class="nav__links" id="navLinks">
+      <button class="nav__link" data-nav="home">Home</button>
+      <button class="nav__link" data-nav="learn">Learn</button>
+      <button class="nav__link" data-nav="practice">Practice</button>
+      <button class="nav__link" data-nav="converter">Converter</button>
+      <button class="nav__link" data-nav="challenge">Challenge</button>
+      <button class="nav__link" data-nav="ai-tutor">AI Tutor</button>
+      <button class="nav__link" data-nav="daily">Daily</button>
+      <button class="nav__link" data-nav="progress">Progress</button>
+      <button class="nav__link" data-nav="about">About</button>
+    </div>
+
+    <button class="nav__burger" id="burgerBtn" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- Filled by script.js with a copy of the nav links, for phone screens -->
+  <div class="nav__mobile" id="navMobile"></div>
+
+  <!-- Toast notifications get added here -->
+  <div class="toasts" id="toasts"></div>
+
+  <main id="main">
+
+    <!-- PAGE 1: HOME -->
+    <section class="page" id="page-home" data-page="home">
+      <div class="hero">
+        <div class="hero__grid" aria-hidden="true"></div>
+        <div class="hero__glow" aria-hidden="true"></div>
+
+        <div class="badge">
+          <span class="badge__dot"></span> AI-Powered Morse Learning
+        </div>
+
+        <h1 class="hero__title">
+          Learn Morse Code<br>
+          <span class="accent">the Smart</span> <span class="accent-blue">Way</span>
+        </h1>
+
+        <p class="hero__desc">
+          Interactive converter, AI tutor, speed challenges, and oscilloscope visualization — everything to master Morse.
+        </p>
+
+        <!-- script.js plays a little "SOS / HI / CQ / DE" light show here on a loop -->
+        <div class="hero__signal" id="heroSignal">
+          <span class="hero__signal-label" id="signalLabel">SOS:</span>
+          <div class="hero__signal-bars" id="signalBars"></div>
+        </div>
+
+        <div class="hero__cta">
+          <button class="btn btn--primary btn--lg" data-nav="learn">Start Learning →</button>
+          <button class="btn btn--secondary btn--lg" data-nav="converter">Try Converter</button>
+        </div>
+
+        <div class="hero__stats">
+          <div class="stat"><div class="stat__v">36+</div><div class="stat__l">Characters</div></div>
+          <div class="stat"><div class="stat__v">6</div><div class="stat__l">Modes</div></div>
+          <div class="stat"><div class="stat__v">AI</div><div class="stat__l">Powered</div></div>
+          <div class="stat"><div class="stat__v">Free</div><div class="stat__l">Forever</div></div>
+        </div>
+      </div>
+
+      <!-- Filled by script.js with the 6 feature cards -->
+      <div class="features" id="featureGrid"></div>
+    </section>
+
+    <!-- PAGE 2: CONVERTER (Text <-> Morse) -->
+    <section class="page" id="page-converter" data-page="converter" hidden>
+      <div class="container container--wide">
+        <div class="section-head">
+          <div class="eyebrow"><span class="rule"></span>Converter<span class="rule"></span></div>
+          <h2>Text ↔ <span class="accent">Morse</span></h2>
+          <p>Live bidirectional conversion. Type on either side.</p>
+        </div>
+
+        <div class="converter-grid">
+          <!-- LEFT BOX: type plain English here -->
+          <div class="panel-box">
+            <div class="panel-box__head">
+              <span><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg> Plain Text</span>
+              <div class="panel-box__actions">
+                <button class="btn btn--ghost btn--sm" id="copyText">Copy</button>
+                <button class="btn btn--danger btn--sm" id="clearBoth">Clear</button>
+              </div>
+            </div>
+            <textarea id="textInput" class="ta" rows="8" placeholder="Type your message here…"></textarea>
+            <div class="char-count" id="textCount">0 chars</div>
+          </div>
+
+          <div class="converter-center">
+            <div class="swap-icon">⇄</div>
+            <button class="btn btn--secondary btn--sm" id="playConverter">▶ Play</button>
+          </div>
+
+          <!-- RIGHT BOX: automatically fills with Morse code (or type Morse here yourself) -->
+          <div class="panel-box">
+            <div class="panel-box__head">
+              <span><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="2"/><path d="M8.5 11.5a5 5 0 0 1 7 0M5.5 8.5a9 9 0 0 1 13 0"/><path d="M4 15H2M22 15h-2"/></svg> Morse Code</span>
+              <div class="panel-box__actions">
+                <button class="btn btn--ghost btn--sm" id="copyMorse">Copy</button>
+              </div>
+            </div>
+            <textarea id="morseInput" class="ta ta--morse" rows="8" placeholder=".. or paste Morse here (dots, dashes, / for word breaks)"></textarea>
+            <div class="char-count" id="morseCount">0 chars</div>
+          </div>
+        </div>
+
+        <!-- Waveform animation while Morse is playing as sound -->
+        <div class="glass-card" id="oscilloscopeCard" style="margin-top:24px;display:none;">
+          <div class="label-small">SIGNAL WAVEFORM</div>
+          <canvas id="oscilloscope" class="oscilloscope"></canvas>
+        </div>
+
+        <div class="glass-card" style="margin-top:24px;">
+          <p class="format-hint">
+            <span class="accent">FORMAT:</span> &nbsp;
+            Letters separated by spaces &nbsp;|&nbsp; Words by <span class="accent"> / </span> &nbsp;|&nbsp;
+            Dot = <span class="accent">.</span> &nbsp; Dash = <span class="accent">-</span>
+          </p>
+          <div class="format-examples">
+            <span>SOS = <span class="accent">... --- ...</span></span>
+            <span>HI = <span class="accent">.... ..</span></span>
+            <span>LOVE = <span class="accent">.-.. --- ...- .</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 3: LEARN (the A-Z / 0-9 / punctuation grid) -->
+    <section class="page" id="page-learn" data-page="learn" hidden>
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow"><span class="rule"></span>Learn Mode<span class="rule"></span></div>
+          <h2>Morse <span class="accent">Alphabet</span></h2>
+          <p>Tap any character to see its code, hear it, and track mastery.</p>
+        </div>
+
+        <!-- Filter chips: tell script.js which characters to show below -->
+        <div class="filter-row" id="learnFilters">
+          <button class="chip is-active" data-filter="all">All</button>
+          <button class="chip" data-filter="alpha">A–Z</button>
+          <button class="chip" data-filter="nums">0–9</button>
+          <button class="chip" data-filter="punct">Punctuation</button>
+          <button class="chip" data-filter="mastered">Mastered ✓</button>
+        </div>
+
+        <!-- Filled by script.js with one tile per character -->
+        <div class="learn-grid" id="learnGrid"></div>
+      </div>
+
+      <!-- The pop-up box that appears when you click a letter tile. -->
+      <div class="modal-overlay" id="learnModal" hidden>
+        <div class="modal">
+          <div class="modal__char" id="modalChar"></div>
+          <div class="modal__code" id="modalCode"></div>
+          <div class="modal__visual" id="modalVisual"></div>
+          <p class="modal__tip" id="modalTip"></p>
+          <div class="modal__actions">
+            <button class="btn btn--primary" id="modalHear">▶ Hear It</button>
+            <button class="btn btn--secondary" id="modalMaster"></button>
+            <button class="btn btn--ghost" id="modalClose">Close</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 4: PRACTICE (quiz yourself: word -> morse, or morse -> word) -->
+    <section class="page" id="page-practice" data-page="practice" hidden>
+      <div class="container container--narrow">
+        <div class="section-head">
+          <div class="eyebrow"><span class="rule"></span>Practice Mode<span class="rule"></span></div>
+          <h2>Drill Your <span class="accent">Skills</span></h2>
+          <p>Random words, both directions. Enter to submit.</p>
+        </div>
+
+        <!-- Two tab buttons that switch practice direction -->
+        <div class="tab-switch">
+          <button class="tab-switch__btn is-active" data-mode="word-to-morse">Word → Morse</button>
+          <button class="tab-switch__btn" data-mode="morse-to-word">Morse → Word</button>
+        </div>
+
+        <div class="question-box">
+          <div class="question-box__q" id="practiceQuestion"></div>
+          <button class="icon-btn" id="practicePlay" hidden>▶</button>
+        </div>
+
+        <div class="hint-box" id="practiceHint" hidden></div>
+
+        <div class="answer-block">
+          <div class="answer-label" id="practiceAnswerLabel">YOUR MORSE CODE:</div>
+          <textarea id="practiceInput" class="ta" rows="3" placeholder="Type Morse code (dots, dashes, spaces)..."></textarea>
+        </div>
+
+        <div class="feedback-box" id="practiceFeedback" hidden></div>
+
+        <div class="action-row">
+          <button class="btn btn--primary" id="practiceCheck">Check Answer</button>
+          <button class="btn btn--secondary" id="practiceNext">Next Word →</button>
+          <button class="btn btn--ghost" id="practiceHintBtn">Show Hint</button>
+        </div>
+
+        <!-- Live scoreboard: script.js updates the numbers inside these -->
+        <div class="score-grid">
+          <div class="glass-card score-cell"><div class="score-v accent-text" id="practiceCorrect">0</div><div class="score-l">Correct</div></div>
+          <div class="glass-card score-cell"><div class="score-v" id="practiceTotal">0</div><div class="score-l">Attempted</div></div>
+          <div class="glass-card score-cell"><div class="score-v accent-blue-text" id="practiceAcc">—</div><div class="score-l">Accuracy</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 5: CHALLENGE (a timed speed-typing game) -->
+    <section class="page" id="page-challenge" data-page="challenge" hidden>
+      <div class="container container--narrow">
+        <div class="section-head">
+          <div class="eyebrow"><span class="rule"></span>Speed Challenge<span class="rule"></span></div>
+          <h2>Race the <span class="accent">Clock</span></h2>
+          <p>Convert as many words to Morse as you can. Press Enter to submit.</p>
+        </div>
+
+        <div class="glass-card timer-card">
+          <div class="timer-display" id="timerDisplay">1:00</div>
+          <div class="duration-picker">
+            <div class="label-small">Duration</div>
+            <div class="duration-picker__btns">
+              <button class="chip is-active" data-duration="30">30s</button>
+              <button class="chip" data-duration="60">60s</button>
+              <button class="chip" data-duration="120">120s</button>
+            </div>
+          </div>
+          <div class="timer-actions">
+            <button class="btn btn--primary" id="challengeStart">▶ Start</button>
+            <button class="btn btn--ghost" id="challengeReset">↺ Reset</button>
+          </div>
+        </div>
+
+        <div class="challenge-word-box" id="challengeWordBox">
+          <div class="label-small">Convert this word to Morse:</div>
+          <div class="challenge-word" id="challengeWord">Press Start to begin</div>
+          <div class="challenge-streak">Streak: <span class="accent-text" id="challengeStreak">0</span> <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1.2 3.2-2.1 4.3-2.1 7.4a4.1 4.1 0 0 0 8.2 0c0-1.8-.8-2.8-.8-2.8s1.9 1.9 1.9 5.6a6.2 6.2 0 1 1-12.4 0c0-4.4 3.4-6.3 5.2-10.2z"/></svg></div>
+        </div>
+
+        <textarea id="challengeInput" class="ta" rows="2" placeholder="Start the challenge first…" disabled></textarea>
+
+        <div class="score-grid score-grid--4">
+          <div class="glass-card score-cell"><div class="score-v accent-text" id="challengeScore">0</div><div class="score-l">Score</div></div>
+          <div class="glass-card score-cell"><div class="score-v accent-text" id="challengeCorrect">0</div><div class="score-l">Correct</div></div>
+          <div class="glass-card score-cell"><div class="score-v" id="challengeTotal">0</div><div class="score-l">Attempted</div></div>
+          <div class="glass-card score-cell"><div class="score-v accent-blue-text" id="challengeAcc">—</div><div class="score-l">Accuracy</div></div>
+        </div>
+
+        <div class="high-score"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 5H3v2a4 4 0 0 0 4 4M17 5h4v2a4 4 0 0 1-4 4"/><path d="M8 21h8M12 17v4"/></svg> High Score: <span id="challengeHigh">0</span></div>
+      </div>
+    </section>
+
+    <!-- PAGE 6: AI TUTOR (a simple chat box) -->
+    <section class="page" id="page-ai-tutor" data-page="ai-tutor" hidden>
+      <div class="container container--medium">
+        <div class="section-head">
+          <div class="eyebrow"><span class="rule"></span>AI Tutor<span class="rule"></span></div>
+          <h2>Ask <span class="accent">Anything</span></h2>
+          <p>Ask for explanations, quizzes, tips, or practice.</p>
+        </div>
+
+        <div class="chat-shell">
+          <!-- Chat bubbles get added here one by one by script.js -->
+          <div class="chat-window" id="chatWindow"></div>
+
+          <!-- Quick "click me" suggestion buttons, built by script.js -->
+          <div class="suggestions" id="suggestions"></div>
+
+          <div class="chat-input-row">
+            <input id="chatInput" class="ta chat-input" type="text" placeholder="Ask your Morse code question…">
+            <button class="btn btn--primary" id="chatSend">Send <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 11 14 9 22 21 10 13 10 13 2"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 7: DAILY (one puzzle per calendar day) -->
+    <section class="page" id="page-daily" data-page="daily" hidden>
+      <div class="container container--narrow">
+        <div class="section-head">
+          <div class="eyebrow"><span class="rule"></span>Daily Challenge<span class="rule"></span></div>
+          <h2>Today's <span class="accent">Mission</span></h2>
+          <p>One challenge per day. Decode the Morse code and type the word.</p>
+        </div>
+
+        <div class="daily-header">
+          <div class="daily-header__emoji"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="2"/><path d="M8.5 11.5a5 5 0 0 1 7 0M5.5 8.5a9 9 0 0 1 13 0"/><path d="M4 15H2M22 15h-2"/></svg></div>
+          <div class="label-small" id="dailyDate"></div>
+          <div class="daily-header__title">Daily Morse Challenge</div>
+          <div class="daily-header__sub">Decode the message below</div>
+        </div>
+
+        <div class="daily-morse" id="dailyMorse"></div>
+
+        <div class="glass-card">
+          <div class="label-small">SIGNAL PREVIEW</div>
+          <canvas id="dailyOscilloscope" class="oscilloscope"></canvas>
+        </div>
+
+        <div class="glass-card">
+          <div class="daily-input-label">Type the word this Morse spells out:</div>
+          <div class="daily-input-row">
+            <input id="dailyInput" class="ta daily-input" type="text" placeholder="YOUR ANSWER…">
+            <button class="btn btn--primary" id="dailyCheck">Check ✓</button>
+          </div>
+        </div>
+
+        <div class="daily-done" id="dailyDone" hidden>
+          <div class="daily-done__emoji"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="M6.5 6.5l2 2M15.5 15.5l2 2M17.5 6.5l-2 2M8.5 15.5l-2 2"/></svg></div>
+          <div class="daily-done__title" id="dailyDoneTitle"></div>
+          <div class="daily-done__sub">Come back tomorrow for a new challenge.</div>
+        </div>
+
+        <div class="daily-hint">
+          <span>Need a refresher on Morse?</span>
+          <button class="btn btn--secondary btn--sm" id="dailyPlay">▶ Play Signal</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 8: PROGRESS (stats built from localStorage — see script.js) -->
+    <section class="page" id="page-progress" data-page="progress" hidden>
+      <div class="container container--wide">
+        <div class="section-head">
+          <div class="eyebrow"><span class="rule"></span>Your Progress<span class="rule"></span></div>
+          <h2>Track Your <span class="accent">Journey</span></h2>
+          <p>See how far you've come. Practice more to unlock insights.</p>
+        </div>
+
+        <div class="stats-grid" id="progressStats"></div>
+
+        <div class="glass-card">
+          <div class="card-title"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="10" y1="20" x2="10" y2="6"/><line x1="16" y1="20" x2="16" y2="14"/><line x1="21" y1="20" x2="21" y2="4"/></svg> Recent Accuracy <span class="card-title__sub" id="accuracySpan"></span></div>
+          <div class="bar-chart" id="accuracyBars"></div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-title"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg> Letters to Improve</div>
+          <div id="weakLetters" class="pill-row"></div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-title"><svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 16.5 14 18.5 21 12 17 5.5 21 7.5 14 2 9.5 9 9"/></svg> Mastered Letters</div>
+          <div id="masteredLetters" class="pill-row"></div>
+        </div>
+
+        <div class="reset-row">
+          <button class="btn btn--danger btn--sm" id="progressReset">↺ Reset All Progress</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 9: ABOUT (static info page + timeline) -->
+    <section class="page" id="page-about" data-page="about" hidden>
+      <div class="container container--medium">
+        <div class="section-head">
+          <div class="eyebrow"><span class="rule"></span>About<span class="rule"></span></div>
+          <h2>The Story of <span class="accent">Morse</span></h2>
+          <p>From telegraph lines to AI tutors — Morse code has shaped 180 years of communication.</p>
+        </div>
+
+        <div class="glass-card about-hero">
+          <div>
+            <div class="about-hero__num">180+</div>
+            <div class="about-hero__label">years of Morse code history</div>
+            <p class="about-hero__text">Invented in the 1830s, Morse code was the first language of the information age. A system of dots and dashes that crossed continents, saved ships, and won wars — now reimagined for the AI era.</p>
+          </div>
+          <div class="about-hero__facts" id="aboutFacts"></div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-title">Timeline</div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+
+        <div>
+          <div class="card-title">Fun Facts</div>
+          <div class="fun-facts" id="funFacts"></div>
+        </div>
+
+        <div class="glass-card glow about-cta">
+          <div class="about-cta__title">Ready to <span class="accent">Start Learning?</span></div>
+          <p class="about-cta__desc">Join thousands learning Morse code the smart way with AI-powered tutoring.</p>
+          <div class="about-cta__btns">
+            <button class="btn btn--primary btn--lg" data-nav="learn">Start Learning →</button>
+            <button class="btn btn--secondary btn--lg" data-nav="ai-tutor">Chat with AI Tutor</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Must load after the HTML above so getElementById calls succeed -->
+  <script src="script.js"></script>
+</body>
+</html>

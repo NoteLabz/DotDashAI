@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dotdash-ai",
+  // Update this to today's date if Cloudflare's dashboard asks you to bump it later.
+  "compatibility_date": "2026-07-29",
+  "main": "src/index.js",
+  "assets": {
+    "directory": "./public/",
+    "binding": "ASSETS"
+  }
+}
