@@ -5,6 +5,14 @@
   one: your HTML/CSS/JS sit in public/, and this one file runs on
   Cloudflare's servers to handle anything that isn't a plain static file
   — in our case, just the /tutor chat endpoint.
+
+  This tutor tries three AI tiers before giving up (see handleTutor below):
+    1. Google Gemini — gemini-flash-latest (env.GEMINI_API_KEY secret)
+    2. Google Gemini — gemini-3.5-flash-lite (same key, separate daily quota)
+    3. Cloudflare Workers AI (env.AI binding) — Cloudflare's own hosted
+       Llama model, no external key at all, separate free quota
+  If all three fail, the frontend (script.js) falls back to its offline
+  rule-based tutor so the chat never just breaks.
 */
 
 const MAX_HISTORY_MESSAGES = 10;
@@ -54,12 +62,6 @@ function json(obj, status = 200) {
 }
 
 async function handleTutor(request, env) {
-  const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) {
-    // Site owner hasn't set the environment variable/secret yet — not a visitor error.
-    return json({ error: 'AI tutor is not configured on the server yet.' }, 500);
-  }
-
   let payload;
   try {
     payload = await request.json();
@@ -72,45 +74,95 @@ async function handleTutor(request, env) {
 
   // Only keep the last few turns, and only role + text — never trust or
   // forward anything else the client might have sent.
-  const history = Array.isArray(payload.history)
-    ? payload.history.slice(-MAX_HISTORY_MESSAGES).map(h => ({
-        role: h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: String(h.text || '').slice(0, MAX_MESSAGE_LENGTH) }],
-      }))
-    : [];
+  const historyRaw = Array.isArray(payload.history) ? payload.history.slice(-MAX_HISTORY_MESSAGES) : [];
 
-  const contents = [...history, { role: 'user', parts: [{ text: message }] }];
-
-  try {
-    const resp = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents,
-          generationConfig: {
-            maxOutputTokens: 700,
-            temperature: 0.7,
-            thinkingConfig: { thinkingLevel: 'low' }, // less invisible "reasoning" = faster + leaves more token budget for the actual reply
-          },
-        }),
-      }
-    );
-
-    if (!resp.ok) {
-      console.error('Gemini API error:', resp.status, await resp.text());
-      return json({ error: 'AI tutor is temporarily unavailable.' }, 502);
+  // TIER 1: Google Gemini — best quality, ~20 free requests/day on this key
+  if (env.GEMINI_API_KEY) {
+    try {
+      const reply = await askGemini(env.GEMINI_API_KEY, 'gemini-flash-latest', message, historyRaw);
+      if (reply) return json({ reply, source: 'gemini-flash-latest' });
+    } catch (err) {
+      console.error('gemini-flash-latest failed, trying gemini-3.5-flash-lite:', err.message);
     }
 
-    const data = await resp.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
-    if (!reply) return json({ error: 'AI tutor returned an empty reply.' }, 502);
-
-    return json({ reply });
-  } catch (err) {
-    console.error('Tutor function error:', err);
-    return json({ error: 'Something went wrong talking to the AI tutor.' }, 500);
+    // TIER 2: A second, separate Gemini model — its own independent daily
+    // quota bucket, so if the first model's quota is used up this one
+    // often still has room.
+    try {
+      const reply = await askGemini(env.GEMINI_API_KEY, 'gemini-3.5-flash-lite', message, historyRaw);
+      if (reply) return json({ reply, source: 'gemini-3.5-flash-lite' });
+    } catch (err) {
+      console.error('gemini-3.5-flash-lite also failed, falling back to Workers AI:', err.message);
+    }
+  } else {
+    console.error('GEMINI_API_KEY not set — skipping straight to Workers AI');
   }
+
+  // TIER 3: Cloudflare Workers AI (Llama 3.1 8B) — runs on Cloudflare's own
+  // servers, no external API key at all, and has its own separate free
+  // quota (10,000 neurons/day) completely independent of both Gemini models.
+  if (env.AI) {
+    try {
+      const reply = await askWorkersAI(env.AI, message, historyRaw);
+      if (reply) return json({ reply, source: 'workers-ai' });
+    } catch (err) {
+      console.error('Workers AI also failed:', err.message);
+    }
+  }
+
+  // All three AI tiers failed (or none configured) — the frontend catches
+  // this and shows the offline rule-based tutor instead of breaking.
+  return json({ error: 'AI tutor is temporarily unavailable.' }, 502);
+}
+
+async function askGemini(apiKey, model, message, historyRaw) {
+  const contents = [
+    ...historyRaw.map(h => ({
+      role: h.role === 'user' ? 'user' : 'model',
+      parts: [{ text: String(h.text || '').slice(0, MAX_MESSAGE_LENGTH) }],
+    })),
+    { role: 'user', parts: [{ text: message }] },
+  ];
+
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents,
+        generationConfig: {
+          maxOutputTokens: 700,
+          temperature: 0.7,
+          thinkingConfig: { thinkingLevel: 'low' }, // less invisible "reasoning" = faster + leaves more token budget for the actual reply
+        },
+      }),
+    }
+  );
+
+  if (!resp.ok) {
+    throw new Error(`${model} API error: ${resp.status} ${await resp.text()}`);
+  }
+
+  const data = await resp.json();
+  const reply = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+  if (!reply) throw new Error(`${model} returned an empty reply`);
+  return reply;
+}
+
+async function askWorkersAI(ai, message, historyRaw) {
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...historyRaw.map(h => ({
+      role: h.role === 'user' ? 'user' : 'assistant',
+      content: String(h.text || '').slice(0, MAX_MESSAGE_LENGTH),
+    })),
+    { role: 'user', content: message },
+  ];
+
+  const result = await ai.run('@cf/meta/llama-3.1-8b-instruct', { messages, max_tokens: 500 });
+  const reply = (result?.response || '').trim();
+  if (!reply) throw new Error('Workers AI returned an empty reply');
+  return reply;
 }
