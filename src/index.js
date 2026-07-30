@@ -6,13 +6,15 @@
   Cloudflare's servers to handle anything that isn't a plain static file
   — in our case, just the /tutor chat endpoint.
 
-  This tutor tries three AI tiers before giving up (see handleTutor below):
-    1. Google Gemini — gemini-flash-latest (env.GEMINI_API_KEY secret)
-    2. Google Gemini — gemini-3.5-flash-lite (same key, separate daily quota)
-    3. Cloudflare Workers AI (env.AI binding) — Cloudflare's own hosted
-       Llama model, no external key at all, separate free quota
-  If all three fail, the frontend (script.js) falls back to its offline
-  rule-based tutor so the chat never just breaks.
+  This tutor tries three Gemini models before giving up (see handleTutor
+  below), ordered by daily free quota size (biggest first) since
+  Flash-Lite quality is plenty for straightforward Morse Q&A/quizzes:
+    1. gemini-3.5-flash-lite (~500 free requests/day)
+    2. gemini-3.1-flash-lite (~500 free requests/day, separate bucket)
+    3. gemini-flash-latest / 3.6 Flash (~20/day, better quality, bonus attempt)
+  ~1,020 combined free requests/day. If all three fail (rare), the
+  frontend (script.js) falls back to its offline rule-based tutor so the
+  chat never just breaks.
 */
 
 const MAX_HISTORY_MESSAGES = 10;
@@ -76,42 +78,27 @@ async function handleTutor(request, env) {
   // forward anything else the client might have sent.
   const historyRaw = Array.isArray(payload.history) ? payload.history.slice(-MAX_HISTORY_MESSAGES) : [];
 
-  // TIER 1: Google Gemini — best quality, ~20 free requests/day on this key
-  if (env.GEMINI_API_KEY) {
-    try {
-      const reply = await askGemini(env.GEMINI_API_KEY, 'gemini-flash-latest', message, historyRaw);
-      if (reply) return json({ reply, source: 'gemini-flash-latest' });
-    } catch (err) {
-      console.error('gemini-flash-latest failed, trying gemini-3.5-flash-lite:', err.message);
-    }
+  // TIER 1 & 2: The two Flash-Lite models — each has its own ~500/day free
+  // quota bucket (much bigger than the full Flash model's ~20/day), and
+  // Flash-Lite quality is plenty for straightforward Morse Q&A/quizzes.
+  const GEMINI_MODELS_IN_ORDER = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
 
-    // TIER 2: A second, separate Gemini model — its own independent daily
-    // quota bucket, so if the first model's quota is used up this one
-    // often still has room.
-    try {
-      const reply = await askGemini(env.GEMINI_API_KEY, 'gemini-3.5-flash-lite', message, historyRaw);
-      if (reply) return json({ reply, source: 'gemini-3.5-flash-lite' });
-    } catch (err) {
-      console.error('gemini-3.5-flash-lite also failed, falling back to Workers AI:', err.message);
+  if (env.GEMINI_API_KEY) {
+    for (const model of GEMINI_MODELS_IN_ORDER) {
+      try {
+        const reply = await askGemini(env.GEMINI_API_KEY, model, message, historyRaw);
+        if (reply) return json({ reply, source: model });
+      } catch (err) {
+        console.error(`${model} failed, trying next tier:`, err.message);
+      }
     }
   } else {
-    console.error('GEMINI_API_KEY not set — skipping straight to Workers AI');
+    console.error('GEMINI_API_KEY not set');
   }
 
-  // TIER 3: Cloudflare Workers AI (Llama 3.1 8B) — runs on Cloudflare's own
-  // servers, no external API key at all, and has its own separate free
-  // quota (10,000 neurons/day) completely independent of both Gemini models.
-  if (env.AI) {
-    try {
-      const reply = await askWorkersAI(env.AI, message, historyRaw);
-      if (reply) return json({ reply, source: 'workers-ai' });
-    } catch (err) {
-      console.error('Workers AI also failed:', err.message);
-    }
-  }
-
-  // All three AI tiers failed (or none configured) — the frontend catches
-  // this and shows the offline rule-based tutor instead of breaking.
+  // All three Gemini tiers failed (rare — ~1,020 combined free requests/day)
+  // — the frontend catches this and shows the offline rule-based tutor
+  // instead of breaking.
   return json({ error: 'AI tutor is temporarily unavailable.' }, 502);
 }
 
@@ -148,21 +135,5 @@ async function askGemini(apiKey, model, message, historyRaw) {
   const data = await resp.json();
   const reply = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
   if (!reply) throw new Error(`${model} returned an empty reply`);
-  return reply;
-}
-
-async function askWorkersAI(ai, message, historyRaw) {
-  const messages = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    ...historyRaw.map(h => ({
-      role: h.role === 'user' ? 'user' : 'assistant',
-      content: String(h.text || '').slice(0, MAX_MESSAGE_LENGTH),
-    })),
-    { role: 'user', content: message },
-  ];
-
-  const result = await ai.run('@cf/meta/llama-3.1-8b-instruct', { messages, max_tokens: 500 });
-  const reply = (result?.response || '').trim();
-  if (!reply) throw new Error('Workers AI returned an empty reply');
   return reply;
 }
