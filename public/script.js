@@ -762,7 +762,13 @@
     // Turns plain reply text into safe HTML: escapes any stray < > &
     function formatMsg(t) {
       const escaped = t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const withCode = escaped.replace(/([.\-]{2,}(?:\s[.\-]+)*)/g, m => {
+      // Strip stray markdown the model sometimes adds despite being told to use plain text
+      const noMd = escaped
+        .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold**
+        .replace(/\*(.+?)\*/g, '$1')       // *italic*
+        .replace(/^#{1,6}\s+/gm, '')       // # headers
+        .replace(/^\s*[-*]\s+/gm, '• ');   // markdown bullets -> a plain bullet char
+      const withCode = noMd.replace(/([.\-]{2,}(?:\s[.\-]+)*)/g, m => {
         if (/^[.\- /]+$/.test(m)) return `<span class="morse-inline">${m}</span>`;
         return m;
       });
