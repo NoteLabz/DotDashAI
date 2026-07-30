@@ -90,7 +90,11 @@ async function handleTutor(request, env) {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
           contents,
-          generationConfig: { maxOutputTokens: 400, temperature: 0.7 },
+          generationConfig: {
+            maxOutputTokens: 700,
+            temperature: 0.7,
+            thinkingConfig: { thinkingLevel: 'low' }, // less invisible "reasoning" = faster + leaves more token budget for the actual reply
+          },
         }),
       }
     );
