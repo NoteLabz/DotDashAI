@@ -504,6 +504,7 @@
     let correct = 0;
     let total = 0;
     let showHint = false;
+    let alreadyChecked = false; // true once Check Answer has scored the CURRENT word
 
     const qEl = document.getElementById('practiceQuestion');
     const playBtn = document.getElementById('practicePlay');
@@ -536,6 +537,7 @@
     function newWord() {
       word = PRACTICE_WORDS[Math.floor(Math.random() * PRACTICE_WORDS.length)];
       input.value = ''; showHint = false;
+      alreadyChecked = false;
       render();
       input.focus();
     }
@@ -548,6 +550,13 @@
       feedback.hidden = false;
       feedback.className = `feedback-box ${ok ? 'feedback-box--correct' : 'feedback-box--wrong'}`;
       feedback.textContent = ok ? '✓ Correct! Great job!' : '✗ Not quite — ' + expected();
+
+      // Only score/save/confetti the FIRST time this word gets checked —
+      // clicking Check Answer again on the same word just re-shows the
+      // same feedback without inflating the scoreboard again.
+      if (alreadyChecked) return;
+      alreadyChecked = true;
+
       total++;
       const letter = word[0]; // track accuracy per starting-letter, used on the Progress page
       updateProg(p => ({
@@ -585,6 +594,9 @@
     playBtn.addEventListener('click', () => audioEngine.play(textToMorse(word)));
     document.getElementById('practiceCheck').addEventListener('click', check);
     document.getElementById('practiceNext').addEventListener('click', newWord);
+    // Editing the answer after a check counts as a fresh attempt — only
+    // repeated clicks on the SAME unedited answer get ignored (the bug fix).
+    input.addEventListener('input', () => { alreadyChecked = false; });
     document.getElementById('practiceHintBtn').addEventListener('click', e => {
       showHint = !showHint;
       hintBox.hidden = !showHint;
