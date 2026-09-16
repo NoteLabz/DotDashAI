@@ -46,6 +46,24 @@
     return m.trim().split(" / ").map(w => w.split(" ").map(c => RMORSE[c] || c).join("")).join(" ");
   }
 
+  // Some OS/browser keyboards "helpfully" substitute typed punctuation with
+  // typographic versions as you type — turning "--" into an em dash "—" or
+  // "..." into a single ellipsis "…" — which silently eats Morse code
+  // characters. The HTML inputmode="verbatim"/autocorrect="off" attributes
+  // stop most of this, but as a safety net we also undo it here on every
+  // keystroke for any Morse-entry box.
+  function stripSmartPunctuation(el) {
+    el.addEventListener('input', () => {
+      const fixed = el.value.replace(/[—–]/g, '--').replace(/…/g, '...');
+      if (fixed !== el.value) {
+        const pos = el.selectionStart;
+        const diff = fixed.length - el.value.length;
+        el.value = fixed;
+        el.setSelectionRange(pos + diff, pos + diff); // keep the cursor roughly where it was
+      }
+    });
+  }
+
   const PRACTICE_WORDS = [
     "HELLO","WORLD","MORSE","CODE","RADIO","SIGNAL","ALPHA","BRAVO","DELTA",
     "ECHO","FOXTROT","GOLF","HOTEL","INDIA","KILO","LIMA","MIKE","NOVEMBER",
@@ -369,6 +387,7 @@
   function initConverter() {
     const textInput = document.getElementById('textInput');
     const morseInput = document.getElementById('morseInput');
+    stripSmartPunctuation(morseInput);
     const textCount = document.getElementById('textCount');
     const morseCount = document.getElementById('morseCount');
     const oscCard = document.getElementById('oscilloscopeCard');
@@ -511,6 +530,7 @@
     const hintBox = document.getElementById('practiceHint');
     const answerLabel = document.getElementById('practiceAnswerLabel');
     const input = document.getElementById('practiceInput');
+    stripSmartPunctuation(input);
     const feedback = document.getElementById('practiceFeedback');
     const correctEl = document.getElementById('practiceCorrect');
     const totalEl = document.getElementById('practiceTotal');
@@ -628,6 +648,7 @@
     const wordEl = document.getElementById('challengeWord');
     const streakEl = document.getElementById('challengeStreak');
     const input = document.getElementById('challengeInput');
+    stripSmartPunctuation(input);
     const scoreEl = document.getElementById('challengeScore');
     const correctEl = document.getElementById('challengeCorrect');
     const totalEl = document.getElementById('challengeTotal');
@@ -1061,4 +1082,4 @@
     initAbout();
     nav('home');
   });
-})(); // <- end of the big wrapper function from line 1; the site is now live.
+})();
