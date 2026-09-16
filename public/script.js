@@ -504,7 +504,7 @@
     let correct = 0;
     let total = 0;
     let showHint = false;
-    let alreadyChecked = false; // true once Check Answer has scored the CURRENT word
+    let graded = false; // has the CURRENT word already been scored? stops repeat Check Answer clicks from inflating the score
 
     const qEl = document.getElementById('practiceQuestion');
     const playBtn = document.getElementById('practicePlay');
@@ -528,6 +528,9 @@
       playBtn.hidden = mode !== 'word-to-morse';
       answerLabel.textContent = mode === 'word-to-morse' ? 'YOUR MORSE CODE:' : 'YOUR WORD:';
       input.placeholder = mode === 'word-to-morse' ? 'Type Morse code (dots, dashes, spaces)...' : 'Type the word...';
+      // Only style the box as Morse when the user is actually typing Morse —
+      // without this the dots/dashes render cramped and hard to read.
+      input.classList.toggle('ta--morse', mode === 'word-to-morse');
       hintBox.hidden = !showHint;
       hintBox.textContent = 'Hint: ' + expected();
       feedback.hidden = true;
@@ -536,27 +539,24 @@
     // Picks a fresh random word and resets the input box for round 2, 3, 4...
     function newWord() {
       word = PRACTICE_WORDS[Math.floor(Math.random() * PRACTICE_WORDS.length)];
-      input.value = ''; showHint = false;
-      alreadyChecked = false;
+      input.value = ''; showHint = false; graded = false;
       render();
       input.focus();
     }
 
     // Grades the current answer, updates the scoreboard, and saves
     function check() {
+      // Already graded this word? Just leave the existing feedback on screen.
+      // Without this, every extra click counted as a whole new attempt —
+      // inflating correct/attempted, skewing accuracy and re-firing confetti.
+      if (graded) return;
       const a = input.value.trim().toUpperCase(); // what the user typed
       const e = expected().trim().toUpperCase();   // the correct answer
       const ok = a === e;
+      graded = true;
       feedback.hidden = false;
       feedback.className = `feedback-box ${ok ? 'feedback-box--correct' : 'feedback-box--wrong'}`;
       feedback.textContent = ok ? '✓ Correct! Great job!' : '✗ Not quite — ' + expected();
-
-      // Only score/save/confetti the FIRST time this word gets checked —
-      // clicking Check Answer again on the same word just re-shows the
-      // same feedback without inflating the scoreboard again.
-      if (alreadyChecked) return;
-      alreadyChecked = true;
-
       total++;
       const letter = word[0]; // track accuracy per starting-letter, used on the Progress page
       updateProg(p => ({
@@ -594,9 +594,6 @@
     playBtn.addEventListener('click', () => audioEngine.play(textToMorse(word)));
     document.getElementById('practiceCheck').addEventListener('click', check);
     document.getElementById('practiceNext').addEventListener('click', newWord);
-    // Editing the answer after a check counts as a fresh attempt — only
-    // repeated clicks on the SAME unedited answer get ignored (the bug fix).
-    input.addEventListener('input', () => { alreadyChecked = false; });
     document.getElementById('practiceHintBtn').addEventListener('click', e => {
       showHint = !showHint;
       hintBox.hidden = !showHint;
@@ -1064,4 +1061,4 @@
     initAbout();
     nav('home');
   });
-})(); // <- end of the big wrapper function from line 1; the site is now live.
+})(); // <- end of the big wrapper function from line 1
