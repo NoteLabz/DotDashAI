@@ -131,7 +131,7 @@
                 <button class="btn btn--ghost btn--sm" id="copyMorse">Copy</button>
               </div>
             </div>
-            <textarea id="morseInput" class="ta ta--morse" rows="8" placeholder=".. or paste Morse here (dots, dashes, / for word breaks)"></textarea>
+            <textarea id="morseInput" class="ta ta--morse" rows="8" placeholder=".. or paste Morse here (dots, dashes, / for word breaks)" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" inputmode="verbatim"></textarea>
             <div class="char-count" id="morseCount">0 chars</div>
           </div>
         </div>
@@ -219,7 +219,7 @@
 
         <div class="answer-block">
           <div class="answer-label" id="practiceAnswerLabel">YOUR MORSE CODE:</div>
-          <textarea id="practiceInput" class="ta" rows="3" placeholder="Type Morse code (dots, dashes, spaces)..."></textarea>
+          <textarea id="practiceInput" class="ta" rows="3" placeholder="Type Morse code (dots, dashes, spaces)..." spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" inputmode="verbatim"></textarea>
         </div>
 
         <div class="feedback-box" id="practiceFeedback" hidden></div>
@@ -270,7 +270,7 @@
           <div class="challenge-streak">Streak: <span class="accent-text" id="challengeStreak">0</span> <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1.2 3.2-2.1 4.3-2.1 7.4a4.1 4.1 0 0 0 8.2 0c0-1.8-.8-2.8-.8-2.8s1.9 1.9 1.9 5.6a6.2 6.2 0 1 1-12.4 0c0-4.4 3.4-6.3 5.2-10.2z"/></svg></div>
         </div>
 
-        <textarea id="challengeInput" class="ta ta--morse" rows="2" placeholder="Start the challenge first…" disabled></textarea>
+        <textarea id="challengeInput" class="ta ta--morse" rows="2" placeholder="Start the challenge first…" disabled spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" inputmode="verbatim"></textarea>
 
         <div class="score-grid score-grid--4">
           <div class="glass-card score-cell"><div class="score-v accent-text" id="challengeScore">0</div><div class="score-l">Score</div></div>
