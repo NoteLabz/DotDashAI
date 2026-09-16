@@ -1061,4 +1061,4 @@
     initAbout();
     nav('home');
   });
-})(); // <- end of the big wrapper function from line 1
+})(); // <- end of the big wrapper function from line 1; the site is now live.
